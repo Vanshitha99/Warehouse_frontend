@@ -20,7 +20,6 @@ function TruckManagement() {
       ? Number(loadedWeight) - Number(emptyWeight)
       : 0;
 
-  // Load truck records from the backend
   const loadTrucks = async () => {
     setLoading(true);
 
@@ -32,11 +31,11 @@ function TruckManagement() {
       }
 
       const data = await response.json();
-
       setTrucks(Array.isArray(data) ? data : []);
     } catch (error) {
       setMessage(
-        "Could not connect to the backend. Check that Spring Boot is running."
+        error.message ||
+          "Could not connect to the backend. Check that Spring Boot is running."
       );
       setMessageType("error");
     } finally {
@@ -83,7 +82,9 @@ function TruckManagement() {
     }
 
     if (!Number.isInteger(bagCount) || bagCount <= 0) {
-      setMessage("Number of bags must be a positive whole number.");
+      setMessage(
+        "Number of bags must be a positive whole number."
+      );
       setMessageType("error");
       return;
     }
@@ -127,8 +128,7 @@ function TruckManagement() {
       await loadTrucks();
     } catch (error) {
       setMessage(
-        error.message ||
-          "Could not connect to the backend."
+        error.message || "Could not connect to the backend."
       );
       setMessageType("error");
     } finally {
@@ -146,17 +146,51 @@ function TruckManagement() {
   };
 
   const formatWeight = (weight) => {
+    if (weight === null || weight === undefined || weight === "") {
+      return "—";
+    }
+
     const value = Number(weight);
-    return Number.isFinite(value) ? `${value.toFixed(2)} kg` : "—";
+
+    return Number.isFinite(value)
+      ? `${value.toFixed(2)} kg`
+      : "—";
+  };
+
+  // Read a saved timestamp from the backend.
+  const getTruckTimestamp = (truck) => {
+    return (
+      truck.createdAt ??
+      truck.createdDate ??
+      truck.dateTime ??
+      truck.registeredAt ??
+      truck.registrationDateTime ??
+      truck.date ??
+      null
+    );
   };
 
   const formatDate = (value) => {
-    if (!value) return "—";
+    if (!value) {
+      return "Not recorded";
+    }
 
+    // Supports ISO strings and Java LocalDateTime values.
     const date = new Date(value);
-    return Number.isNaN(date.getTime())
-      ? "—"
-      : date.toLocaleString("en-IN");
+
+    if (Number.isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+
+    return date.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
   };
 
   return (
@@ -330,22 +364,27 @@ function TruckManagement() {
                     <td>
                       <strong>{truck.truckNumber}</strong>
                     </td>
+
                     <td>{formatWeight(truck.loadedWeight)}</td>
+
                     <td>{formatWeight(truck.emptyWeight)}</td>
+
                     <td>
                       <strong>
                         {formatWeight(
                           truck.grossWeight ??
-                            Number(truck.loadedWeight) -
+                            (
+                              Number(truck.loadedWeight) -
                               Number(truck.emptyWeight)
+                            )
                         )}
                       </strong>
                     </td>
+
                     <td>{truck.numberOfBags ?? "—"}</td>
+
                     <td>
-                      {formatDate(
-                        truck.createdAt ?? truck.date
-                      )}
+                      {formatDate(getTruckTimestamp(truck))}
                     </td>
                   </tr>
                 ))
@@ -359,3 +398,4 @@ function TruckManagement() {
 }
 
 export default TruckManagement;
+
