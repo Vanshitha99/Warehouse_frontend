@@ -30,9 +30,7 @@ In the Vercel dashboard under **Project Settings -> Environment Variables**:
 
 | Variable | Value | Description |
 | :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | `https://<your-backend-app>.onrender.com/api` | URL of the deployed Spring Boot backend API |
-
-*Note: For local development, `VITE_API_BASE_URL` automatically defaults to `http://localhost:8080/api` if unset.*
+| `VITE_API_URL` | `https://warhouse-backend-c6fh.onrender.com` | URL of the deployed Spring Boot backend API |
 
 ---
 

@@ -18,5 +18,5 @@ services:
 
     envVars:
       # Set to your deployed Render backend URL (no trailing slash)
-      - key: VITE_API_BASE_URL
+      - key: VITE_API_URL
         sync: false            # e.g. https://tgswc-warehouse-backend.onrender.com/api
