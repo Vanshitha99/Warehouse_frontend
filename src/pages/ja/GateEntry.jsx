@@ -21,8 +21,12 @@ function GateEntry() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const normalizedPartyCode = partyCode.trim().toUpperCase();
+
   const selectedParty = parties.find(
-    (party) => party.partyCode === partyCode
+    (party) =>
+      String(party.partyCode || "").trim().toUpperCase() ===
+      normalizedPartyCode
   );
 
   const selectedTruck = trucks.find(
@@ -79,11 +83,6 @@ function GateEntry() {
 
     if (!partyCode || !truckNumber || !commodity.trim() || !bags) {
       showMessage("Please fill all required fields.");
-      return;
-    }
-
-    if (!selectedParty) {
-      showMessage("Select a valid party code.");
       return;
     }
 
@@ -198,23 +197,22 @@ function GateEntry() {
           <div className="form-group full-width">
             <label htmlFor="partyCode">Party / Miller Code</label>
             <div className="party-row">
-              <select
+              <input
                 id="partyCode"
+                name="partyCode"
+                type="text"
                 value={partyCode}
                 onChange={(event) => setPartyCode(event.target.value)}
+                placeholder="Enter party / miller code"
+                autoComplete="off"
                 required
-              >
-                <option value="">Select party code</option>
-                {parties.map((party) => (
-                  <option key={party.id} value={party.partyCode}>
-                    {party.partyCode}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <div className="party-name-box">
+              <div className="party-name-box" aria-live="polite">
                 {selectedParty?.partyName ||
-                  "Party name will appear here"}
+                  (partyCode.trim()
+                    ? "No matching party found. Check the code."
+                    : "Party name will appear here")}
               </div>
             </div>
           </div>
@@ -355,7 +353,7 @@ function GateEntry() {
                       <td>
                         {entry.partyName || entry.party?.partyName || "—"}
                         <small>
-                          {entry.party?.partyCode || ""}
+                          {entry.party?.partyCode || entry.partyCode || ""}
                         </small>
                       </td>
                       <td>{entry.truckNumber || entry.truck?.truckNumber}</td>
