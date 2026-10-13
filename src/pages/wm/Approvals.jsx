@@ -1,9 +1,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
+import { API_BASE_URL } from "../../services/api";
 
-const APPROVAL_API = "http://localhost:8080/api/approvals";
-const GATE_API = "http://localhost:8080/api/gate-entries";
+const APPROVAL_API = `${API_BASE_URL}/approvals`;
+const GATE_API = `${API_BASE_URL}/gate-entries`;
 
 function Approvals() {
   const [approvals, setApprovals] = useState([]);

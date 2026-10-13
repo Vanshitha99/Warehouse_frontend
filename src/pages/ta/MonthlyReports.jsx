@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../../services/api";
 
-const API = "http://localhost:8080/api";
+const API = API_BASE_URL;
 
 function MonthlyReports() {
 const [selectedMonth, setSelectedMonth] = useState("");

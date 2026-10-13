@@ -1,10 +1,11 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
+import { API_BASE_URL } from "../../services/api";
 
-const GATE_API = "http://localhost:8080/api/gate-entries";
-const APPROVAL_API = "http://localhost:8080/api/approvals";
-const WEIGHMENT_API = "http://localhost:8080/api/weighments";
+const GATE_API = `${API_BASE_URL}/gate-entries`;
+const APPROVAL_API = `${API_BASE_URL}/approvals`;
+const WEIGHMENT_API = `${API_BASE_URL}/weighments`;
 
 function WMDashboard() {
   const [entries, setEntries] = useState([]);

@@ -1,7 +1,8 @@
 
 import { useCallback, useEffect, useState } from "react";
+import { API_BASE_URL } from "../../services/api";
 
-const API_URL = "http://localhost:8080/api/generated-reports";
+const API_URL = `${API_BASE_URL}/generated-reports`;
 
 function ReportHistory() {
   const [searchText, setSearchText] = useState("");

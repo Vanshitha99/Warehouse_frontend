@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
+import { API_BASE_URL } from "../../services/api";
 
-const API = "http://localhost:8080/api";
+const API = API_BASE_URL;
 
 function JADashboard() {
   const [gateEntries, setGateEntries] = useState([]);

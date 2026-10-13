@@ -1,9 +1,10 @@
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../services/api";
 
-const GATE_API = "http://localhost:8080/api/gate-entries";
-const TRUCK_API = "http://localhost:8080/api/trucks";
-const PARTY_API = "http://localhost:8080/api/miller-parties";
+const GATE_API = `${API_BASE_URL}/gate-entries`;
+const TRUCK_API = `${API_BASE_URL}/trucks`;
+const PARTY_API = `${API_BASE_URL}/miller-parties`;
 
 function GateEntry() {
   const [partyCode, setPartyCode] = useState("");

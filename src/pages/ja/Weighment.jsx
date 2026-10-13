@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../services/api";
 
-const WEIGHMENT_API = "http://localhost:8080/api/weighments";
-const PARTY_API = "http://localhost:8080/api/miller-parties";
+const WEIGHMENT_API = `${API_BASE_URL}/weighments`;
+const PARTY_API = `${API_BASE_URL}/miller-parties`;
 
 function Weighment() {
   const [truckNumber, setTruckNumber] = useState("");

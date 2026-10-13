@@ -1,8 +1,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
+import { API_BASE_URL } from "../../services/api";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = API_BASE_URL;
 
 function getApprovalStatus(approval) {
   return String(
