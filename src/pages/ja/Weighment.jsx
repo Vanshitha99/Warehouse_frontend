@@ -1,9 +1,7 @@
-
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../services/api";
 
 const WEIGHMENT_API = `${API_BASE_URL}/weighments`;
-const PARTY_API = `${API_BASE_URL}/miller-parties`;
 
 function Weighment() {
   const [truckNumber, setTruckNumber] = useState("");
@@ -16,41 +14,31 @@ function Weighment() {
   const [godownNumber, setGodownNumber] = useState("");
 
   const [weighments, setWeighments] = useState([]);
-  const [parties, setParties] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [recordsError, setRecordsError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    setError("");
+    setRecordsError("");
 
     try {
-      const [weighmentResponse, partyResponse] = await Promise.all([
-        fetch(WEIGHMENT_API),
-        fetch(PARTY_API),
-      ]);
+      const weighmentResponse = await fetch(WEIGHMENT_API);
 
       if (!weighmentResponse.ok) {
-        throw new Error("Unable to load weighments.");
+        throw new Error(`Unable to load existing weighment records (HTTP ${weighmentResponse.status}).`);
       }
 
-      if (!partyResponse.ok) {
-        throw new Error("Unable to load party details.");
-      }
-
-      const [weighmentData, partyData] = await Promise.all([
-        weighmentResponse.json(),
-        partyResponse.json(),
-      ]);
-
-      setWeighments(
-        Array.isArray(weighmentData) ? weighmentData : []
-      );
-      setParties(Array.isArray(partyData) ? partyData : []);
+      const weighmentData = await weighmentResponse.json();
+      setWeighments(Array.isArray(weighmentData) ? weighmentData : []);
     } catch (err) {
-      setError(err.message || "Could not connect to the backend.");
+      setRecordsError(
+        err.message?.includes("Unable to load")
+          ? err.message
+          : `Unable to load existing weighment records: ${err.message || "Could not connect to the backend."}`
+      );
     } finally {
       setLoading(false);
     }
@@ -59,17 +47,6 @@ function Weighment() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const handlePartyCode = (value) => {
-    const code = value.trim().toUpperCase();
-    setPartyCode(code);
-
-    const party = parties.find(
-      (item) => item.partyCode?.toUpperCase() === code
-    );
-
-    setPartyName(party?.partyName || "");
-  };
 
   const resetForm = () => {
     setTruckNumber("");
@@ -90,14 +67,14 @@ function Weighment() {
     if (
       !truckNumber.trim() ||
       !partyCode.trim() ||
-      !partyName ||
+      !partyName.trim() ||
       !acknowledgementNumber.trim() ||
       !weighbillNumber.trim() ||
       truckLoadWeight === "" ||
       !stackNumber.trim() ||
       !godownNumber.trim()
     ) {
-      setError("Please fill all required fields using a valid party code.");
+      setError("Please fill all required fields.");
       return;
     }
 
@@ -110,8 +87,8 @@ function Weighment() {
 
     const payload = {
       truckNumber: truckNumber.trim().toUpperCase(),
-      partyName,
-      partyCode,
+      partyName: partyName.trim(),
+      partyCode: partyCode.trim().toUpperCase(),
       acknowledgementNumber: acknowledgementNumber.trim(),
       weighBillNumber: weighbillNumber.trim(),
       loadedWeight: weight,
@@ -148,9 +125,9 @@ function Weighment() {
         );
       }
 
-      await loadData();
       resetForm();
       setMessage("Weighment saved successfully to the database.");
+      await loadData();
     } catch (err) {
       setError(err.message || "Unable to save weighment.");
     } finally {
@@ -172,12 +149,12 @@ function Weighment() {
     return Number.isNaN(date.getTime())
       ? value
       : date.toLocaleString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
   };
 
   return (
@@ -193,10 +170,12 @@ function Weighment() {
             <label htmlFor="weighmentTruckNumber">Truck Number</label>
             <input
               id="weighmentTruckNumber"
+              name="truckNumber"
               type="text"
               placeholder="e.g. TS08AB1234"
               value={truckNumber}
-              onChange={(event) => setTruckNumber(event.target.value)}
+              onChange={(event) => setTruckNumber(event.target.value.toUpperCase())}
+              autoComplete="off"
               required
             />
           </div>
@@ -205,19 +184,28 @@ function Weighment() {
             <label htmlFor="weighmentPartyCode">Miller / Party Code</label>
             <input
               id="weighmentPartyCode"
+              name="partyCode"
               type="text"
-              placeholder="Enter registered party code"
+              placeholder="Enter party code"
               value={partyCode}
-              onChange={(event) => handlePartyCode(event.target.value)}
+              onChange={(event) => setPartyCode(event.target.value.toUpperCase())}
+              autoComplete="off"
               required
             />
           </div>
 
           <div className="form-group full-width">
-            <label>Miller / Party Name</label>
-            <div className="party-name-box">
-              {partyName || "Enter a registered party code"}
-            </div>
+            <label htmlFor="weighmentPartyName">Miller / Party Name</label>
+            <input
+              id="weighmentPartyName"
+              name="partyName"
+              type="text"
+              placeholder="Enter party or miller name"
+              value={partyName}
+              onChange={(event) => setPartyName(event.target.value)}
+              autoComplete="off"
+              required
+            />
           </div>
 
           <div className="form-group">
@@ -226,7 +214,9 @@ function Weighment() {
             </label>
             <input
               id="acknowledgementNumber"
+              name="acknowledgementNumber"
               type="text"
+              placeholder="Enter acknowledgement number"
               value={acknowledgementNumber}
               onChange={(event) =>
                 setAcknowledgementNumber(event.target.value)
@@ -239,7 +229,9 @@ function Weighment() {
             <label htmlFor="weighbillNumber">Weighbill Number</label>
             <input
               id="weighbillNumber"
+              name="weighbillNumber"
               type="text"
+              placeholder="Enter weighbill number"
               value={weighbillNumber}
               onChange={(event) => setWeighbillNumber(event.target.value)}
               required
@@ -250,9 +242,11 @@ function Weighment() {
             <label htmlFor="truckLoadWeight">Truck Load Weight (kg)</label>
             <input
               id="truckLoadWeight"
+              name="truckLoadWeight"
               type="number"
               min="0.01"
               step="0.01"
+              placeholder="Enter loaded weight in kg"
               value={truckLoadWeight}
               onChange={(event) => setTruckLoadWeight(event.target.value)}
               required
@@ -263,7 +257,9 @@ function Weighment() {
             <label htmlFor="stackNumber">Stack Number</label>
             <input
               id="stackNumber"
+              name="stackNumber"
               type="text"
+              placeholder="Enter stack number"
               value={stackNumber}
               onChange={(event) => setStackNumber(event.target.value)}
               required
@@ -274,7 +270,9 @@ function Weighment() {
             <label htmlFor="godownNumber">Godown Number</label>
             <input
               id="godownNumber"
+              name="godownNumber"
               type="text"
+              placeholder="Enter godown number"
               value={godownNumber}
               onChange={(event) => setGodownNumber(event.target.value)}
               required
@@ -320,6 +318,12 @@ function Weighment() {
           </button>
         </div>
 
+        {recordsError && (
+          <p className="form-message" role="alert" style={{ marginBottom: "16px" }}>
+            {recordsError}
+          </p>
+        )}
+
         <div className="table-container">
           <table>
             <thead>
@@ -336,10 +340,22 @@ function Weighment() {
             </thead>
 
             <tbody>
-              {weighments.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan="8" className="empty-row">
-                    {loading ? "Loading weighments..." : "No saved weighments yet."}
+                    Loading weighments...
+                  </td>
+                </tr>
+              ) : recordsError ? (
+                <tr>
+                  <td colSpan="8" className="empty-row">
+                    {recordsError}
+                  </td>
+                </tr>
+              ) : weighments.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="empty-row">
+                    No saved weighments yet.
                   </td>
                 </tr>
               ) : (
@@ -369,4 +385,3 @@ function Weighment() {
 }
 
 export default Weighment;
-
