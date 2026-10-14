@@ -1,37 +1,20 @@
-
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../services/api";
 
 const GATE_API = `${API_BASE_URL}/gate-entries`;
-const TRUCK_API = `${API_BASE_URL}/trucks`;
-const PARTY_API = `${API_BASE_URL}/miller-parties`;
 
 function GateEntry() {
   const [partyCode, setPartyCode] = useState("");
+  const [partyName, setPartyName] = useState("");
   const [truckNumber, setTruckNumber] = useState("");
   const [commodity, setCommodity] = useState("");
   const [bags, setBags] = useState("");
-
-  const [parties, setParties] = useState([]);
-  const [trucks, setTrucks] = useState([]);
   const [entries, setEntries] = useState([]);
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const normalizedPartyCode = partyCode.trim().toUpperCase();
-
-  const selectedParty = parties.find(
-    (party) =>
-      String(party.partyCode || "").trim().toUpperCase() ===
-      normalizedPartyCode
-  );
-
-  const selectedTruck = trucks.find(
-    (truck) => truck.truckNumber === truckNumber
-  );
 
   const showMessage = (text, type = "error") => {
     setMessage(text);
@@ -40,34 +23,19 @@ function GateEntry() {
 
   const loadData = async () => {
     setLoading(true);
-
     try {
-      const [partyResponse, truckResponse, entryResponse] =
-        await Promise.all([
-          fetch(PARTY_API),
-          fetch(TRUCK_API),
-          fetch(GATE_API),
-        ]);
+      const response = await fetch(GATE_API);
+      const data = await response.json().catch(() => []);
 
-      if (!partyResponse.ok || !truckResponse.ok || !entryResponse.ok) {
+      if (!response.ok) {
         throw new Error(
-          "Unable to load gate entry data. Check backend endpoints and permissions."
+          data?.message || data?.error || `Unable to load gate entries (HTTP ${response.status}).`
         );
       }
 
-      const [partyData, truckData, entryData] = await Promise.all([
-        partyResponse.json(),
-        truckResponse.json(),
-        entryResponse.json(),
-      ]);
-
-      setParties(Array.isArray(partyData) ? partyData : []);
-      setTrucks(Array.isArray(truckData) ? truckData : []);
-      setEntries(Array.isArray(entryData) ? entryData : []);
+      setEntries(Array.isArray(data) ? data : []);
     } catch (error) {
-      showMessage(
-        error.message || "Could not connect to the backend."
-      );
+      showMessage(error.message || "Could not connect to the backend.");
     } finally {
       setLoading(false);
     }
@@ -81,13 +49,13 @@ function GateEntry() {
     event.preventDefault();
     setMessage("");
 
-    if (!partyCode || !truckNumber || !commodity.trim() || !bags) {
-      showMessage("Please fill all required fields.");
-      return;
-    }
+    const cleanPartyCode = partyCode.trim();
+    const cleanPartyName = partyName.trim();
+    const cleanTruckNumber = truckNumber.trim();
+    const cleanCommodity = commodity.trim();
 
-    if (!selectedTruck) {
-      showMessage("Select a registered truck.");
+    if (!cleanPartyCode || !cleanPartyName || !cleanTruckNumber || !cleanCommodity || !bags) {
+      showMessage("Please fill in Party Code, Party Name, Truck Number, Commodity, and No. of Bags.");
       return;
     }
 
@@ -97,40 +65,36 @@ function GateEntry() {
     }
 
     setSaving(true);
-
     try {
       const params = new URLSearchParams({
-        partyCode,
-        truckNumber,
-        commodity: commodity.trim(),
+        partyCode: cleanPartyCode,
+        partyName: cleanPartyName,
+        truckNumber: cleanTruckNumber,
+        commodity: cleanCommodity,
         numberOfBags: bags,
       });
 
       const response = await fetch(`${GATE_API}?${params.toString()}`, {
         method: "POST",
       });
-
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.error ||
-            result.message ||
-            `Gate entry failed (HTTP ${response.status}).`
+          result.error || result.message ||
+          `Gate entry failed (HTTP ${response.status}). The backend may need to be updated to accept manual party names and truck numbers.`
         );
       }
 
       showMessage("Gate entry saved successfully.", "success");
       setPartyCode("");
+      setPartyName("");
       setTruckNumber("");
       setCommodity("");
       setBags("");
-
       await loadData();
     } catch (error) {
-      showMessage(
-        error.message || "Could not connect to the backend."
-      );
+      showMessage(error.message || "Could not connect to the backend.");
     } finally {
       setSaving(false);
     }
@@ -138,33 +102,26 @@ function GateEntry() {
 
   const handleMarkOut = async (id) => {
     setMessage("");
-
     try {
-      const response = await fetch(`${GATE_API}/${id}/out`, {
-        method: "PUT",
-      });
-
+      const response = await fetch(`${GATE_API}/${id}/out`, { method: "PUT" });
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.error ||
-            result.message ||
-            `Could not mark truck out (HTTP ${response.status}).`
+          result.error || result.message || `Could not mark truck out (HTTP ${response.status}).`
         );
       }
 
       showMessage("Truck exit recorded successfully.", "success");
       await loadData();
     } catch (error) {
-      showMessage(
-        error.message || "Could not connect to the backend."
-      );
+      showMessage(error.message || "Could not connect to the backend.");
     }
   };
 
   const handleClear = () => {
     setPartyCode("");
+    setPartyName("");
     setTruckNumber("");
     setCommodity("");
     setBags("");
@@ -174,7 +131,6 @@ function GateEntry() {
 
   const formatTime = (value) => {
     if (!value) return "—";
-
     const date = new Date(value);
     return Number.isNaN(date.getTime())
       ? String(value).replace("T", " ")
@@ -186,58 +142,59 @@ function GateEntry() {
       <div className="page-header">
         <div>
           <h1>Gate Entry</h1>
-          <p>
-            Record incoming trucks and track their entry and exit.
-          </p>
+          <p>Record incoming trucks and track their entry and exit.</p>
         </div>
       </div>
 
       <div className="gate-entry-card">
         <form onSubmit={handleSubmit}>
-          <div className="form-group full-width">
+          <div className="form-group">
             <label htmlFor="partyCode">Party / Miller Code</label>
-            <div className="party-row">
-              <input
-                id="partyCode"
-                name="partyCode"
-                type="text"
-                value={partyCode}
-                onChange={(event) => setPartyCode(event.target.value)}
-                placeholder="Enter party / miller code"
-                autoComplete="off"
-                required
-              />
+            <input
+              id="partyCode"
+              name="partyCode"
+              type="text"
+              value={partyCode}
+              onChange={(event) => setPartyCode(event.target.value)}
+              placeholder="Enter party / miller code"
+              autoComplete="off"
+              required
+            />
+          </div>
 
-              <div className="party-name-box" aria-live="polite">
-                {selectedParty?.partyName ||
-                  (partyCode.trim()
-                    ? "No matching party found. Check the code."
-                    : "Party name will appear here")}
-              </div>
-            </div>
+          <div className="form-group">
+            <label htmlFor="partyName">Party / Miller Name</label>
+            <input
+              id="partyName"
+              name="partyName"
+              type="text"
+              value={partyName}
+              onChange={(event) => setPartyName(event.target.value)}
+              placeholder="Enter party / miller name"
+              autoComplete="off"
+              required
+            />
           </div>
 
           <div className="form-group">
             <label htmlFor="truckNumber">Truck Number</label>
-            <select
+            <input
               id="truckNumber"
+              name="truckNumber"
+              type="text"
               value={truckNumber}
-              onChange={(event) => setTruckNumber(event.target.value)}
+              onChange={(event) => setTruckNumber(event.target.value.toUpperCase())}
+              placeholder="Enter truck number"
+              autoComplete="off"
               required
-            >
-              <option value="">Select registered truck</option>
-              {trucks.map((truck) => (
-                <option key={truck.id} value={truck.truckNumber}>
-                  {truck.truckNumber}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="form-group">
             <label htmlFor="commodity">Commodity</label>
             <input
               id="commodity"
+              name="commodity"
               type="text"
               placeholder="Enter commodity"
               value={commodity}
@@ -250,6 +207,7 @@ function GateEntry() {
             <label htmlFor="bags">No. of Bags</label>
             <input
               id="bags"
+              name="numberOfBags"
               type="number"
               min="1"
               step="1"
@@ -262,26 +220,14 @@ function GateEntry() {
 
           <div className="form-group">
             <label>In Time</label>
-            <div className="readonly-box">
-              Automatically recorded when saved
-            </div>
+            <div className="readonly-box">Automatically recorded when saved</div>
           </div>
 
           <div className="form-actions">
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={saving || loading}
-            >
+            <button type="submit" className="primary-button" disabled={saving}>
               {saving ? "Saving..." : "Save Gate Entry"}
             </button>
-
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={handleClear}
-              disabled={saving}
-            >
+            <button type="button" className="secondary-button" onClick={handleClear} disabled={saving}>
               Clear
             </button>
           </div>
@@ -290,9 +236,7 @@ function GateEntry() {
             <p
               className="form-message"
               role="status"
-              style={{
-                color: messageType === "success" ? "green" : "crimson",
-              }}
+              style={{ color: messageType === "success" ? "green" : "crimson" }}
             >
               {message}
             </p>
@@ -306,13 +250,7 @@ function GateEntry() {
             <h2>Recent Gate Entries</h2>
             <p>Entries retrieved from the warehouse database.</p>
           </div>
-
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={loadData}
-            disabled={loading}
-          >
+          <button type="button" className="secondary-button" onClick={loadData} disabled={loading}>
             {loading ? "Loading..." : "Refresh"}
           </button>
         </div>
@@ -331,62 +269,37 @@ function GateEntry() {
                 <th>Action</th>
               </tr>
             </thead>
-
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="8" className="empty-row">
-                    Loading gate entries...
-                  </td>
-                </tr>
+                <tr><td colSpan="8" className="empty-row">Loading gate entries...</td></tr>
               ) : entries.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="empty-row">
-                    No gate entries found.
-                  </td>
-                </tr>
+                <tr><td colSpan="8" className="empty-row">No gate entries found.</td></tr>
               ) : (
-                [...entries]
-                  .sort((a, b) => Number(b.id) - Number(a.id))
-                  .map((entry) => (
-                    <tr key={entry.id}>
-                      <td>
-                        {entry.partyName || entry.party?.partyName || "—"}
-                        <small>
-                          {entry.party?.partyCode || entry.partyCode || ""}
-                        </small>
-                      </td>
-                      <td>{entry.truckNumber || entry.truck?.truckNumber}</td>
-                      <td>{entry.commodity}</td>
-                      <td>{entry.numberOfBags ?? "—"}</td>
-                      <td>{formatTime(entry.inTime)}</td>
-                      <td>{formatTime(entry.outTime)}</td>
-                      <td>
-                        <span
-                          className={
-                            entry.status === "INSIDE"
-                              ? "status-badge inside"
-                              : "status-badge exited"
-                          }
-                        >
-                          {entry.status}
-                        </span>
-                      </td>
-                      <td>
-                        {entry.status === "INSIDE" ? (
-                          <button
-                            type="button"
-                            className="mark-out-button"
-                            onClick={() => handleMarkOut(entry.id)}
-                          >
-                            Mark Out
-                          </button>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                [...entries].sort((a, b) => Number(b.id) - Number(a.id)).map((entry) => (
+                  <tr key={entry.id}>
+                    <td>
+                      {entry.partyName || entry.party?.partyName || "—"}
+                      <small>{entry.party?.partyCode || entry.partyCode || ""}</small>
+                    </td>
+                    <td>{entry.truckNumber || entry.truck?.truckNumber || "—"}</td>
+                    <td>{entry.commodity || "—"}</td>
+                    <td>{entry.numberOfBags ?? "—"}</td>
+                    <td>{formatTime(entry.inTime)}</td>
+                    <td>{formatTime(entry.outTime)}</td>
+                    <td>
+                      <span className={entry.status === "INSIDE" ? "status-badge inside" : "status-badge exited"}>
+                        {entry.status || "—"}
+                      </span>
+                    </td>
+                    <td>
+                      {entry.status === "INSIDE" ? (
+                        <button type="button" className="mark-out-button" onClick={() => handleMarkOut(entry.id)}>
+                          Mark Out
+                        </button>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
