@@ -1,9 +1,10 @@
 
+
 import axios from "axios";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://warehouse-backend-c6fh.onrender.com/api";
+  "https://warhouse-backend-c6fh.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
